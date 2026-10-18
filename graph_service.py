@@ -19,17 +19,35 @@ load_dotenv()
 GRAPH_NAME = os.getenv("FALKORDB_GRAPH", "graphsentry")
 
 
-def connect_graph():
-    """Return (client, graph) connected to FalkorDB using environment settings."""
-    kwargs: dict[str, Any] = {
-        "host": os.getenv("FALKORDB_HOST", "localhost"),
-        "port": int(os.getenv("FALKORDB_PORT", "6379")),
-    }
-    password = os.getenv("FALKORDB_PASSWORD", "")
-    if password:
-        kwargs["password"] = password
-    client = FalkorDB(**kwargs)
-    graph = client.select_graph(GRAPH_NAME)
+def connect_graph(graph_name: str | None = None):
+    """Return (client, graph) connected to FalkorDB using environment settings.
+
+    Supports local development (defaults to localhost:6379) and remote/cloud
+    instances via individual parameters (host, port, username, password, ssl)
+    or a full connection URL (FALKORDB_URL / FALKORDB_URI).
+    """
+    target_graph = graph_name or os.getenv("FALKORDB_GRAPH", "graphsentry")
+    url = os.getenv("FALKORDB_URL", os.getenv("FALKORDB_URI", "")).strip()
+    if url:
+        client = FalkorDB(url=url)
+    else:
+        raw_port = os.getenv("FALKORDB_PORT", "6379").strip()
+        port = int(raw_port) if raw_port.isdigit() else 6379
+        kwargs: dict[str, Any] = {
+            "host": os.getenv("FALKORDB_HOST", "localhost"),
+            "port": port,
+        }
+        username = os.getenv("FALKORDB_USERNAME", "").strip()
+        if username:
+            kwargs["username"] = username
+        password = os.getenv("FALKORDB_PASSWORD", "").strip()
+        if password:
+            kwargs["password"] = password
+        ssl_val = os.getenv("FALKORDB_SSL", os.getenv("FALKORDB_TLS", "")).strip().lower()
+        if ssl_val in {"true", "1", "yes", "on"}:
+            kwargs["ssl"] = True
+        client = FalkorDB(**kwargs)
+    graph = client.select_graph(target_graph)
     # A tiny query verifies connectivity early and yields a useful error if offline.
     graph.query("RETURN 1 AS ok")
     return client, graph

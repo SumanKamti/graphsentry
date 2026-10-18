@@ -293,21 +293,13 @@ def test_graph_inventory_isolated_nodes_no_relationships():
 
 def _is_falkordb_running() -> bool:
     try:
-        import os
         from falkordb import FalkorDB
         # Ensure FalkorDB is a real class, not a MagicMock
         if hasattr(FalkorDB, "_mock_return_value") or "MagicMock" in type(FalkorDB).__name__:
             return False
-        host = os.getenv("FALKORDB_HOST", "localhost")
-        port = int(os.getenv("FALKORDB_PORT", "6379"))
-        password = os.getenv("FALKORDB_PASSWORD", "")
-        kwargs = {"host": host, "port": port}
-        if password:
-            kwargs["password"] = password
-        client = FalkorDB(**kwargs)
-        graph = client.select_graph(os.getenv("FALKORDB_GRAPH", "graphsentry"))
-        res = graph.query("RETURN 1 AS ok")
-        return bool(res.result_set and res.result_set[0][0] == 1)
+        from graph_service import connect_graph
+        client, graph = connect_graph()
+        return True
     except Exception:
         return False
 
@@ -318,20 +310,11 @@ def test_live_falkordb_indicator_cypher_query():
     if not _is_falkordb_running():
         pytest.skip("FalkorDB is offline or falkordb package is not installed in the test runner")
 
-    import os
     import uuid
-    from falkordb import FalkorDB
-    from graph_service import investigate_alert
+    from graph_service import connect_graph, investigate_alert
 
-    host = os.getenv("FALKORDB_HOST", "localhost")
-    port = int(os.getenv("FALKORDB_PORT", "6379"))
-    password = os.getenv("FALKORDB_PASSWORD", "")
-    kwargs = {"host": host, "port": port}
-    if password:
-        kwargs["password"] = password
-
-    client = FalkorDB(**kwargs)
     test_graph_name = f"test_graphsentry_{uuid.uuid4().hex[:8]}"
+    client, _ = connect_graph(test_graph_name)
     test_graph = client.select_graph(test_graph_name)
 
     try:

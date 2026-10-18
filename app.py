@@ -133,8 +133,11 @@ try:
 except Exception as exc:
     with header_right:
         st.markdown("<div style='text-align:right;padding-top:1.5rem;'><span class='badge badge-red'>● FALKORDB OFFLINE</span></div>", unsafe_allow_html=True)
-    st.error("Cannot connect to FalkorDB yet. Start the database before launching the app.")
-    st.code("docker compose up -d falkordb\npython -m venv .venv\n.venv\\Scripts\\activate\npip install -r requirements.txt\nstreamlit run app.py", language="powershell")
+    st.error("Cannot connect to FalkorDB. Check that the database is running and reachable.")
+    st.markdown("""
+- **Local development:** Start the container with `docker compose up -d falkordb` and verify port 6379 is open.
+- **Cloud deployment:** Verify your hosting environment variables: `FALKORDB_HOST`, `FALKORDB_PORT`, `FALKORDB_PASSWORD`, and `FALKORDB_SSL=true` (or `FALKORDB_URL`).
+    """)
     st.caption(f"Connection detail: {type(exc).__name__}: {exc}")
     st.stop()
 
@@ -148,6 +151,10 @@ with st.sidebar:
     st.divider()
     st.markdown("**Workspace**")
     st.markdown("<span class='badge badge-green'>FALKORDB CONNECTED</span>", unsafe_allow_html=True)
+    _host_disp = os.getenv("FALKORDB_HOST", "localhost")
+    _ssl_on = os.getenv("FALKORDB_SSL", os.getenv("FALKORDB_TLS", "")).strip().lower() in {"true", "1", "yes", "on"}
+    _ssl_tag = " (TLS)" if _ssl_on else ""
+    st.markdown(f"<span class='small-note'>Host: `{html.escape(_host_disp)}`{_ssl_tag}</span>", unsafe_allow_html=True)
     st.markdown(f"<span class='small-note'>Graph: `{html.escape(os.getenv('FALKORDB_GRAPH', 'graphsentry'))}`</span>", unsafe_allow_html=True)
     st.divider()
     st.markdown("**Investigation controls**")
@@ -389,3 +396,27 @@ with tab_actions:
 # 8. Footer
 st.divider()
 st.caption("◈ GraphSentry · Evidence-first security investigation agent · Demo data only · Built for Graph Hacks 2026")
+
+
+if __name__ == "__main__":
+    # Enables direct execution with `python app.py` on cloud platforms (Render, Railway, etc.)
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        _in_streamlit = get_script_run_ctx() is not None
+    except Exception:
+        _in_streamlit = False
+
+    if not _in_streamlit:
+        import sys
+        from streamlit.web import cli as stcli
+        port = os.getenv("PORT", os.getenv("STREAMLIT_SERVER_PORT", "8501"))
+        sys.argv = [
+            "streamlit",
+            "run",
+            __file__,
+            "--server.port",
+            str(port),
+            "--server.address",
+            "0.0.0.0",
+        ]
+        sys.exit(stcli.main())

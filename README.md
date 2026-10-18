@@ -200,6 +200,86 @@ The test suite in `tests/test_risk.py` covers:
 
 ---
 
+## Cloud Deployment
+
+GraphSentry is cloud-ready and can be deployed to platforms like **Render**, **Railway**, **Streamlit Community Cloud**, **Hugging Face Spaces**, or **Fly.io**, connected to a remote **FalkorDB Cloud** instance.
+
+### Required Environment Variables
+
+Configure the following environment variables in your cloud hosting provider's dashboard:
+
+| Variable | Required | Description | Example |
+|---|:---:|---|---|
+| `FALKORDB_HOST` | **Yes**\* | Hostname or IP of your remote FalkorDB instance | `graphsentry-db.falkordb.cloud` |
+| `FALKORDB_PORT` | **Yes**\* | Port of the remote FalkorDB service | `6379` |
+| `FALKORDB_PASSWORD` | **Yes**\* | Database authentication password | `your-secure-password` |
+| `FALKORDB_SSL` | **Yes**\* | Set to `true` to enable TLS/SSL encrypted connection | `true` |
+| `FALKORDB_USERNAME` | Optional | Database username (e.g. `default` on cloud instances) | `default` |
+| `FALKORDB_GRAPH` | Optional | Graph database name (defaults to `graphsentry`) | `graphsentry` |
+| `FALKORDB_URL` | Optional | Complete connection URL; overrides individual host/port/ssl options | `falkors://user:pass@host:6379` |
+| `PORT` | Auto | Web port; automatically supplied by hosting platforms | `8501` / `10000` |
+| `GROQ_API_KEY` | Optional | Groq API key for natural-language briefings (falls back safely if omitted) | `gsk_...` |
+| `GROQ_MODEL` | Optional | Groq model identifier (defaults to `llama-3.3-70b-versatile`) | `llama-3.3-70b-versatile` |
+
+*\*Note: Alternatively, you can supply `FALKORDB_URL` instead of setting `FALKORDB_HOST`, `PORT`, `PASSWORD`, and `SSL` individually.*
+
+### Platform Deployment Guides
+
+#### 1. Railway (Recommended: Two-Service Deployment)
+
+Deploy both FalkorDB and GraphSentry in the same Railway project with zero public exposure for the database:
+
+**A. Deploy FalkorDB Service:**
+1. In Railway, click **+ New** → **Docker Image**.
+2. Enter `falkordb/falkordb:latest` and click deploy.
+3. Rename the service to `falkordb`.
+4. Go to **Settings** → **Volumes** → **Add Volume**:
+   - **Mount Path:** `/var/lib/falkordb/data` (ensures graph data survives container restarts).
+5. **Private Networking:** Do **not** generate a public domain for this service. Railway assigns an internal private address: `falkordb.railway.internal`.
+
+**B. Deploy GraphSentry Web Service:**
+1. In the same project, click **+ New** → **GitHub Repo** and select `graphsentry_hackathon`.
+2. Railway detects the Python app and runs the included [`Procfile`](Procfile) (`web: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0`).
+3. In **Variables**, add:
+   - `FALKORDB_HOST`: `falkordb.railway.internal` (or `${{falkordb.RAILWAY_PRIVATE_DOMAIN}}`)
+   - `FALKORDB_PORT`: `6379`
+   - `FALKORDB_SSL`: `false` (internal private mesh network; no TLS overhead needed)
+   - `FALKORDB_GRAPH`: `graphsentry`
+   - `GROQ_API_KEY`: *(optional, for natural-language briefs)*
+4. In **Settings** → **Networking**, click **Generate Domain** to access your public Streamlit dashboard.
+
+#### 2. Render
+1. Create a **Web Service** connecting your repository.
+2. Build command: `pip install -r requirements.txt`.
+3. Start command: `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0` (or rely on `Procfile`).
+4. In **Environment**, supply `FALKORDB_HOST`, `FALKORDB_PORT`, `FALKORDB_PASSWORD`, `FALKORDB_SSL=true`.
+
+#### 3. Streamlit Community Cloud
+1. Deploy directly from your GitHub repository with main file path `app.py`.
+2. In **App Settings** → **Secrets**, define your FalkorDB credentials:
+   ```toml
+   FALKORDB_HOST = "your-falkordb-host"
+   FALKORDB_PORT = "6379"
+   FALKORDB_PASSWORD = "your-password"
+   FALKORDB_SSL = "true"
+   FALKORDB_GRAPH = "graphsentry"
+   GROQ_API_KEY = "your-groq-key" # optional
+   ```
+
+#### 4. Docker Container Deployment
+A Docker container can run against remote FalkorDB by passing environment variables:
+```bash
+docker run -d \
+  -p 8501:8501 \
+  -e FALKORDB_HOST="your-falkordb-host" \
+  -e FALKORDB_PORT="6379" \
+  -e FALKORDB_PASSWORD="your-password" \
+  -e FALKORDB_SSL="true" \
+  graphsentry
+```
+
+---
+
 ## Graph Model & Cypher Reference
 
 ### Node Schema
