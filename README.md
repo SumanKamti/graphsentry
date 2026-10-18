@@ -317,6 +317,13 @@ docker run -d \
 
 ---
 
+## 🚀 Live Demo
+
+**[Open GraphSentry](https://graphsentry-production.up.railway.app)**
+
+Explore synthetic security alerts, graph-based investigations, risk evidence, and simulated response actions.
+
+---
 ## AI Tool Disclosure
 
 AI coding assistants (ChatGPT and Claude) were used during development to assist with initial project scoping, architecture planning, code scaffolding, and draft documentation.
