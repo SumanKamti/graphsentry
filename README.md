@@ -127,7 +127,7 @@ The risk engine (`risk_engine.py`) is deterministic, transparent, and grounded s
 
 ### 1. Clone the Repository
 ```bash
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/SumanKamti/graphsentry.git
 cd graphsentry_hackathon
 ```
 
